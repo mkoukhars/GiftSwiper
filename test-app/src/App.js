@@ -1,171 +1,197 @@
 import { useState, useEffect, useRef } from "react";
 
-export default function GiftSwiper() {
-  const [currentCard, setCurrentCard] = useState(1);
-  const [recommendations, setRecommendations] = useState([]);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [swipeDirection, setSwipeDirection] = useState(null);
+/* ---------------- Questions Config ---------------- */
 
-  const startPosRef = useRef({ x: 0, y: 0 });
+const questions = [
+  [
+    { label: "Name", key: "recipient" },
+    { label: "Age", key: "age" },
+    { label: "Gender", key: "gender" },
+  ],
+  [
+    { label: "Hobbies", key: "hobbies", textarea: true },
+    { label: "Personality", key: "personality", textarea: true },
+  ],
+  [
+    { label: "Budget", key: "budget" },
+    { label: "Occasion", key: "occasion" },
+  ],
+];
 
-  /* -------------------- Storage -------------------- */
+const initialForm = {
+  recipient: "",
+  age: "",
+  gender: "",
+  hobbies: "",
+  personality: "",
+  budget: "",
+  occasion: "",
+};
+
+/* ---------------- App ---------------- */
+
+export default function App() {
+  const [step, setStep] = useState(0);
+  const [formData, setFormData] = useState(initialForm);
+
+  const onChange = (k, v) =>
+    setFormData((p) => ({ ...p, [k]: v }));
+
+  const Page = questions[step];
+
+  return step < questions.length ? (
+    <QuestionPage
+      fields={Page}
+      formData={formData}
+      onChange={onChange}
+      onNext={() => setStep(step + 1)}
+    />
+  ) : (
+    <GiftSwiper />
+  );
+}
+
+/* ---------------- Question Page ---------------- */
+
+function QuestionPage({ fields, formData, onChange, onNext }) {
+  return (
+    <div className="min-h-screen bg-pink-200 flex items-center justify-center p-6">
+      <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-lg w-full">
+
+        {fields.map((f) => (
+          <div key={f.key} className="mb-4">
+            <label className="block mb-2 font-medium">
+              {f.label}
+            </label>
+
+            {f.textarea ? (
+              <textarea
+                className="w-full border-2 rounded-xl p-3"
+                value={formData[f.key]}
+                onChange={(e) => onChange(f.key, e.target.value)}
+              />
+            ) : (
+              <input
+                className="w-full border-2 rounded-xl p-3"
+                value={formData[f.key]}
+                onChange={(e) => onChange(f.key, e.target.value)}
+              />
+            )}
+          </div>
+        ))}
+
+        <button
+          onClick={onNext}
+          className="w-full bg-black text-white rounded-xl py-3 mt-6"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Gift Swiper ---------------- */
+
+function GiftSwiper() {
+  const [current, setCurrent] = useState(1);
+  const [saved, setSaved] = useState([]);
+  const [offset, setOffset] = useState(0);
+
+  const startX = useRef(0);
+  const dragging = useRef(false);
+
+  /* ---------- Storage ---------- */
 
   useEffect(() => {
-    const saved = localStorage.getItem("giftRecommendations");
-    if (!saved) return;
-
-    try {
-      const { recommendations = [], currentCard = 1 } = JSON.parse(saved);
-      setRecommendations(recommendations);
-      setCurrentCard(currentCard);
-    } catch {
-      console.error("Failed to load");
-    }
+    const s = JSON.parse(localStorage.getItem("gifts") || "{}");
+    setSaved(s.saved || []);
+    setCurrent(s.current || 1);
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(
-      "giftRecommendations",
-      JSON.stringify({ recommendations, currentCard })
-    );
-  }, [recommendations, currentCard]);
+    localStorage.setItem("gifts", JSON.stringify({ saved, current }));
+  }, [saved, current]);
 
-  /* -------------------- Swipe -------------------- */
+  /* ---------- Swipe ---------- */
 
-  const handleSwipe = (direction) => {
-    setSwipeDirection(direction);
-
-    setTimeout(() => {
-      if (direction === "right") {
-        setRecommendations((prev) => [...prev, currentCard]);
-      }
-      setCurrentCard((prev) => prev + 1);
-      setSwipeDirection(null);
-      setDragOffset({ x: 0, y: 0 });
-    }, 300);
+  const swipe = (dir) => {
+    if (dir === "right") setSaved((p) => [...p, current]);
+    setCurrent((p) => p + 1);
+    setOffset(0);
   };
 
-  /* -------------------- Pointer Events -------------------- */
-
-  const handlePointerDown = (e) => {
-    setIsDragging(true);
-    startPosRef.current = { x: e.clientX, y: e.clientY };
+  const onDown = (e) => {
+    dragging.current = true;
+    startX.current = e.clientX;
   };
 
-  const handlePointerMove = (e) => {
-    if (!isDragging) return;
+  const onMove = (e) =>
+    dragging.current && setOffset(e.clientX - startX.current);
 
-    setDragOffset({
-      x: e.clientX - startPosRef.current.x,
-      y: e.clientY - startPosRef.current.y,
-    });
+  const onUp = () => {
+    dragging.current = false;
+    offset > 100 ? swipe("right") :
+    offset < -100 ? swipe("left") :
+    setOffset(0);
   };
 
-  const handlePointerUp = () => {
-    if (!isDragging) return;
-    setIsDragging(false);
-
-    if (dragOffset.x > 100) handleSwipe("right");
-    else if (dragOffset.x < -100) handleSwipe("left");
-    else setDragOffset({ x: 0, y: 0 });
-  };
-
-  /* -------------------- Random -------------------- */
-
-  const removeRecommendation = (cardNumber) =>
-    setRecommendations((prev) => prev.filter((n) => n !== cardNumber));
-
-  const clearAll = () =>
-    window.confirm("Clear all recommendations?") &&
-    setRecommendations([]);
-
-  const rotation = isDragging ? dragOffset.x / 20 : 0;
-  const opacity = isDragging
-    ? Math.max(0.5, 1 - Math.abs(dragOffset.x) / 300)
-    : 1;
-
-  /* -------------------- UI -------------------- */
+  const remove = (n) => setSaved(saved.filter((x) => x !== n));
 
   return (
     <div className="min-h-screen bg-pink-200 p-6">
-      <h1 className="text-5xl font-bold text-center mb-8 text-purple-800">
+      <h1 className="text-4xl font-bold text-center mb-8">
         Gift Swiper
       </h1>
 
-      <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-        {/* Card */}
-        <div className="flex flex-col items-center">
-          <div className="relative w-80 h-80 mb-4">
-            <div
-              className="absolute inset-0 flex items-center justify-center cursor-grab active:cursor-grabbing transition-all"
-              style={{
-                transform: swipeDirection
-                  ? swipeDirection === "right"
-                    ? "translateX(400px) rotate(20deg)"
-                    : "translateX(-400px) rotate(-20deg)"
-                  : `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${rotation}deg)`,
-                opacity: swipeDirection ? 0 : opacity,
-              }}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerLeave={handlePointerUp}
-            >
-              <div className="w-full h-full bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 border-purple-200">
-                <div className="text-9xl font-bold text-purple-600">
-                  {currentCard}
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
 
-          <p className="text-gray-600 text-sm">
-            Make sure you are holding down. Swipe right to save, left to skip
-          </p>
+        {/* Card */}
+
+        <div className="flex justify-center">
+          <div
+            className="w-80 h-80 bg-white rounded-3xl shadow-xl flex items-center justify-center text-8xl font-bold cursor-grab"
+            style={{
+              transform: `translateX(${offset}px) rotate(${offset / 20}deg)`
+            }}
+            onPointerDown={onDown}
+            onPointerMove={onMove}
+            onPointerUp={onUp}
+            onPointerLeave={onUp}
+          >
+            {current}
+          </div>
         </div>
 
         {/* Recommendations */}
-        <div className="bg-white rounded-3xl shadow-xl p-6">
-          <div className="flex justify-between mb-4">
-            <h2 className="text-3xl font-bold text-purple-800">
-              Gift Recommendations
-            </h2>
-            {recommendations.length > 0 && (
-              <button
-                onClick={clearAll}
-                className="text-red-500 text-sm underline"
-              >
-                Clear All
-              </button>
-            )}
-          </div>
 
-          {recommendations.length === 0 ? (
-            <p className="text-gray-500 text-center mt-12">
-              No gifts saved yet
-            </p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {recommendations.map((num, i) => (
-                <div
-                  key={`${num}-${i}`}
-                  className="relative bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl p-6 flex justify-center shadow-md"
-                >
-                  <span className="text-5xl font-bold text-purple-600">
-                    {num}
-                  </span>
-                  <button
-                    onClick={() => removeRecommendation(num)}
-                    className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
+        <div className="bg-white rounded-3xl shadow-xl p-6">
+          <h2 className="text-2xl font-bold mb-4">
+            Gift Recommendations
+          </h2>
+
+          {saved.length === 0 && (
+            <p className="text-gray-400">No gifts yet</p>
           )}
+
+          <div className="grid grid-cols-2 gap-4">
+            {saved.map((n) => (
+              <div
+                key={n}
+                className="bg-pink-100 rounded-xl p-4 relative text-center text-4xl font-bold"
+              >
+                {n}
+                <button
+                  onClick={() => remove(n)}
+                  className="absolute top-1 right-2 text-red-500"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
+
       </div>
     </div>
   );
