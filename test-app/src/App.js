@@ -1,172 +1,164 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState } from 'react';
+import { ChevronDown, ArrowRight, ArrowLeft, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-export default function GiftSwiper() {
-  const [currentCard, setCurrentCard] = useState(1);
-  const [recommendations, setRecommendations] = useState([]);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [swipeDirection, setSwipeDirection] = useState(null);
+const GiftFinder = () => {
+  const [step, setStep] = useState(1);
 
-  const startPosRef = useRef({ x: 0, y: 0 });
+  const nextStep = () => setStep((prev) => Math.min(prev + 1, 3));
+  const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
-  /* -------------------- Storage -------------------- */
-
-  useEffect(() => {
-    const saved = localStorage.getItem("giftRecommendations");
-    if (!saved) return;
-
-    try {
-      const { recommendations = [], currentCard = 1 } = JSON.parse(saved);
-      setRecommendations(recommendations);
-      setCurrentCard(currentCard);
-    } catch {
-      console.error("Failed to load");
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(
-      "giftRecommendations",
-      JSON.stringify({ recommendations, currentCard })
-    );
-  }, [recommendations, currentCard]);
-
-  /* -------------------- Swipe -------------------- */
-
-  const handleSwipe = (direction) => {
-    setSwipeDirection(direction);
-
-    setTimeout(() => {
-      if (direction === "right") {
-        setRecommendations((prev) => [...prev, currentCard]);
-      }
-      setCurrentCard((prev) => prev + 1);
-      setSwipeDirection(null);
-      setDragOffset({ x: 0, y: 0 });
-    }, 300);
+  // Animation variants for smooth sliding
+  const variants = {
+    enter: (direction) => ({
+      x: direction > 0 ? 50 : -50,
+      opacity: 0,
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+    },
+    exit: (direction) => ({
+      x: direction < 0 ? 50 : -50,
+      opacity: 0,
+    }),
   };
-
-  /* -------------------- Pointer Events -------------------- */
-
-  const handlePointerDown = (e) => {
-    setIsDragging(true);
-    startPosRef.current = { x: e.clientX, y: e.clientY };
-  };
-
-  const handlePointerMove = (e) => {
-    if (!isDragging) return;
-
-    setDragOffset({
-      x: e.clientX - startPosRef.current.x,
-      y: e.clientY - startPosRef.current.y,
-    });
-  };
-
-  const handlePointerUp = () => {
-    if (!isDragging) return;
-    setIsDragging(false);
-
-    if (dragOffset.x > 100) handleSwipe("right");
-    else if (dragOffset.x < -100) handleSwipe("left");
-    else setDragOffset({ x: 0, y: 0 });
-  };
-
-  /* -------------------- Random -------------------- */
-
-  const removeRecommendation = (cardNumber) =>
-    setRecommendations((prev) => prev.filter((n) => n !== cardNumber));
-
-  const clearAll = () =>
-    window.confirm("Clear all recommendations?") &&
-    setRecommendations([]);
-
-  const rotation = isDragging ? dragOffset.x / 20 : 0;
-  const opacity = isDragging
-    ? Math.max(0.5, 1 - Math.abs(dragOffset.x) / 300)
-    : 1;
-
-  /* -------------------- UI -------------------- */
 
   return (
-    <div className="min-h-screen bg-pink-200 p-6">
-      <h1 className="text-5xl font-bold text-center mb-8 text-purple-800">
-        Gift Swiper
-      </h1>
-
-      <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-        {/* Card */}
-        <div className="flex flex-col items-center">
-          <div className="relative w-80 h-80 mb-4">
-            <div
-              className="absolute inset-0 flex items-center justify-center cursor-grab active:cursor-grabbing transition-all"
-              style={{
-                transform: swipeDirection
-                  ? swipeDirection === "right"
-                    ? "translateX(400px) rotate(20deg)"
-                    : "translateX(-400px) rotate(-20deg)"
-                  : `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${rotation}deg)`,
-                opacity: swipeDirection ? 0 : opacity,
-              }}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerLeave={handlePointerUp}
-            >
-              <div className="w-full h-full bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 border-purple-200">
-                <div className="text-9xl font-bold text-purple-600">
-                  {currentCard}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <p className="text-gray-600 text-sm">
-            Make sure you are holding down. Swipe right to save, left to skip
-          </p>
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 font-sans">
+      {/* Main Card - Fixed width and height for consistency */}
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 overflow-hidden">
+        
+        {/* Progress Bars */}
+        <div className="flex gap-2 h-1.5 mb-10">
+          {[1, 2, 3].map((i) => (
+            <div 
+              key={i}
+              className={`flex-1 rounded-full transition-colors duration-500 ${step >= i ? 'bg-[#7C3AED]' : 'bg-purple-100'}`} 
+            />
+          ))}
         </div>
 
-        {/* Recommendations */}
-        <div className="bg-white rounded-3xl shadow-xl p-6">
-          <div className="flex justify-between mb-4">
-            <h2 className="text-3xl font-bold text-purple-800">
-              Gift Recommendations
-            </h2>
-            {recommendations.length > 0 && (
-              <button
-                onClick={clearAll}
-                className="text-red-500 text-sm underline"
-              >
-                Clear All
-              </button>
-            )}
-          </div>
-
-          {recommendations.length === 0 ? (
-            <p className="text-gray-500 text-center mt-12">
-              No gifts saved yet
-            </p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {recommendations.map((num, i) => (
-                <div
-                  key={`${num}-${i}`}
-                  className="relative bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl p-6 flex justify-center shadow-md"
-                >
-                  <span className="text-5xl font-bold text-purple-600">
-                    {num}
-                  </span>
-                  <button
-                    onClick={() => removeRecommendation(num)}
-                    className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs"
-                  >
-                    ✕
-                  </button>
+        {/* Animation Container - min-h keeps the card from jumping sizes */}
+        <div className="relative min-h-[420px]">
+          <AnimatePresence mode="wait" custom={step}>
+            <motion.div
+              key={step}
+              custom={step}
+              variants={variants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="space-y-8"
+            >
+              {step === 1 && (
+                <div className="space-y-8">
+                  <div className="space-y-2">
+                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Who is this for?</h1>
+                    <p className="text-gray-400 font-medium text-lg">Tell us about the lucky recipient.</p>
+                  </div>
+                  <div className="space-y-6">
+                    <Field label="Relation to you">
+                      <Select placeholder="Select relation" />
+                    </Field>
+                    <div className="flex gap-4">
+                      <Field label="Age"><Input type="number" /></Field>
+                      <Field label="Gender"><Select placeholder="Gender" /></Field>
+                    </div>
+                  </div>
+                  <NextButton onClick={nextStep} />
                 </div>
-              ))}
-            </div>
-          )}
+              )}
+
+              {step === 2 && (
+                <div className="space-y-8">
+                  <div className="space-y-2">
+                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">What are they like?</h1>
+                    <p className="text-gray-400 font-medium text-lg">Their hobbies and personality.</p>
+                  </div>
+                  <div className="space-y-6">
+                    <Field label="Hobbies & Interests" hint="List as many as you can think of!">
+                      <Input placeholder="e.g. Hiking, Coding, Cooking (comma separated)" />
+                    </Field>
+                    <Field label="Personality Traits">
+                      <Input placeholder="e.g. Introvert, Creative, Funny (comma separated)" />
+                    </Field>
+                  </div>
+                  <div className="flex gap-4 pt-2">
+                    <BackButton onClick={prevStep} />
+                    <NextButton onClick={nextStep} />
+                  </div>
+                </div>
+              )}
+
+              {step === 3 && (
+                <div className="space-y-8">
+                  <div className="space-y-2">
+                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">The logistics</h1>
+                    <p className="text-gray-400 font-medium text-lg">Budget and occasion.</p>
+                  </div>
+                  <div className="space-y-6">
+                    <Field label="Budget Range ($)">
+                      <div className="flex items-center gap-3">
+                        <Input placeholder="0" />
+                        <span className="text-gray-300">—</span>
+                        <Input placeholder="100" />
+                      </div>
+                    </Field>
+                    <Field label="Occasion">
+                      <Input placeholder="Birthday" />
+                    </Field>
+                  </div>
+                  <div className="flex gap-4 pt-2">
+                    <BackButton onClick={prevStep} />
+                    <button className="flex-[1.2] bg-gradient-to-r from-[#7C3AED] to-[#EC4899] hover:opacity-90 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95">
+                      <Sparkles size={18} /> Find Gifts
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
     </div>
   );
-}
+};
+
+// --- Sub-components for cleaner code ---
+
+const Field = ({ label, children, hint }) => (
+  <div className="space-y-2">
+    <label className="block text-slate-800 font-bold">{label}</label>
+    {children}
+    {hint && <p className="text-sm text-gray-400">{hint}</p>}
+  </div>
+);
+
+const Input = (props) => (
+  <input {...props} className="w-full bg-[#F9FAFB] border border-gray-200 rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all placeholder:text-gray-400" />
+);
+
+const Select = ({ placeholder }) => (
+  <div className="relative">
+    <select className="w-full appearance-none bg-[#F9FAFB] border border-gray-200 rounded-xl px-4 py-4 text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all">
+      <option>{placeholder}</option>
+    </select>
+    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+  </div>
+);
+
+const NextButton = ({ onClick }) => (
+  <button onClick={onClick} className="w-full bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md">
+    Next <ArrowRight size={20} />
+  </button>
+);
+
+const BackButton = ({ onClick }) => (
+  <button onClick={onClick} className="flex-1 bg-white border border-slate-200 text-slate-900 font-bold py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-50 transition-all active:scale-95">
+    <ArrowLeft size={20} /> Back
+  </button>
+);
+
+export default GiftFinder;
