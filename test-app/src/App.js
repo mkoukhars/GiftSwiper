@@ -195,4 +195,51 @@ function GiftSwiper() {
       </div>
     </div>
   );
-}
+};
+
+// --- Updated Sub-components ---
+
+const Field = ({ label, children, hint }) => (
+  <div className="space-y-2">
+    <label className="block text-slate-800 font-bold">{label}</label>
+    {children}
+    {hint && <p className="text-sm text-gray-400">{hint}</p>}
+  </div>
+);
+
+const Input = ({ value, onChange, ...props }) => (
+  <input 
+    {...props} 
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    className="w-full bg-[#F9FAFB] border border-gray-200 rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all placeholder:text-gray-400" 
+  />
+);
+
+const Select = ({ placeholder, value, onChange, options = [] }) => (
+  <div className="relative">
+    <select 
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full appearance-none bg-[#F9FAFB] border border-gray-200 rounded-xl px-4 py-4 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+    >
+      <option value="" disabled>{placeholder}</option>
+      {options.map(opt => <option key={opt} value={opt.toLowerCase()}>{opt}</option>)}
+    </select>
+    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+  </div>
+);
+
+const NextButton = ({ onClick }) => (
+  <button onClick={onClick} className="w-full bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md">
+    Next <ArrowRight size={20} />
+  </button>
+);
+
+const BackButton = ({ onClick }) => (
+  <button onClick={onClick} className="flex-1 bg-white border border-slate-200 text-slate-900 font-bold py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-50 transition-all active:scale-95">
+    <ArrowLeft size={20} /> Back
+  </button>
+);
+
+export default GiftFinder;
