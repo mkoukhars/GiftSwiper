@@ -4,42 +4,64 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const GiftFinder = () => {
   const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  
+  // 1. STATE TO HOLD ALL FORM DATA
+  const [formData, setFormData] = useState({
+    relation: '',
+    age: '',
+    gender: '',
+    hobbies: '',
+    personality: '',
+    minBudget: '',
+    maxBudget: '',
+    occasion: ''
+  });
 
   const nextStep = () => setStep((prev) => Math.min(prev + 1, 3));
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
-  // Animation variants for smooth sliding
+  // 2. HANDLER TO UPDATE STATE
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // 3. BACKEND COMMUNICATION (POST REQUEST)
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:5000/generate-gifts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+      console.log("AI Recommendations:", data.result);
+      alert("AI Response: " + data.result); // Replace this with a result screen later!
+    } catch (error) {
+      console.error("Connection error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const variants = {
-    enter: (direction) => ({
-      x: direction > 0 ? 50 : -50,
-      opacity: 0,
-    }),
-    center: {
-      x: 0,
-      opacity: 1,
-    },
-    exit: (direction) => ({
-      x: direction < 0 ? 50 : -50,
-      opacity: 0,
-    }),
+    enter: (direction) => ({ x: direction > 0 ? 50 : -50, opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (direction) => ({ x: direction < 0 ? 50 : -50, opacity: 0 }),
   };
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 font-sans">
-      {/* Main Card - Fixed width and height for consistency */}
       <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 overflow-hidden">
         
-        {/* Progress Bars */}
         <div className="flex gap-2 h-1.5 mb-10">
           {[1, 2, 3].map((i) => (
-            <div 
-              key={i}
-              className={`flex-1 rounded-full transition-colors duration-500 ${step >= i ? 'bg-[#7C3AED]' : 'bg-purple-100'}`} 
-            />
+            <div key={i} className={`flex-1 rounded-full transition-colors duration-500 ${step >= i ? 'bg-[#7C3AED]' : 'bg-purple-100'}`} />
           ))}
         </div>
 
-        {/* Animation Container - min-h keeps the card from jumping sizes */}
         <div className="relative min-h-[420px]">
           <AnimatePresence mode="wait" custom={step}>
             <motion.div
@@ -60,11 +82,25 @@ const GiftFinder = () => {
                   </div>
                   <div className="space-y-6">
                     <Field label="Relation to you">
-                      <Select placeholder="Select relation" />
+                      <Select 
+                        placeholder="Select relation" 
+                        value={formData.relation} 
+                        onChange={(val) => handleChange('relation', val)}
+                        options={['Parent', 'Partner', 'Friend', 'Sibling']}
+                      />
                     </Field>
                     <div className="flex gap-4">
-                      <Field label="Age"><Input type="number" /></Field>
-                      <Field label="Gender"><Select placeholder="Gender" /></Field>
+                      <Field label="Age">
+                        <Input type="number" value={formData.age} onChange={(val) => handleChange('age', val)} />
+                      </Field>
+                      <Field label="Gender">
+                        <Select 
+                            placeholder="Gender" 
+                            value={formData.gender} 
+                            onChange={(val) => handleChange('gender', val)} 
+                            options={['Male', 'Female', 'Non-binary', 'Other']}
+                        />
+                      </Field>
                     </div>
                   </div>
                   <NextButton onClick={nextStep} />
@@ -79,10 +115,18 @@ const GiftFinder = () => {
                   </div>
                   <div className="space-y-6">
                     <Field label="Hobbies & Interests" hint="List as many as you can think of!">
-                      <Input placeholder="e.g. Hiking, Coding, Cooking (comma separated)" />
+                      <Input 
+                        placeholder="e.g. Hiking, Coding, Cooking" 
+                        value={formData.hobbies} 
+                        onChange={(val) => handleChange('hobbies', val)} 
+                      />
                     </Field>
                     <Field label="Personality Traits">
-                      <Input placeholder="e.g. Introvert, Creative, Funny (comma separated)" />
+                      <Input 
+                        placeholder="e.g. Introvert, Creative, Funny" 
+                        value={formData.personality} 
+                        onChange={(val) => handleChange('personality', val)} 
+                      />
                     </Field>
                   </div>
                   <div className="flex gap-4 pt-2">
@@ -101,19 +145,23 @@ const GiftFinder = () => {
                   <div className="space-y-6">
                     <Field label="Budget Range ($)">
                       <div className="flex items-center gap-3">
-                        <Input placeholder="0" />
+                        <Input placeholder="0" value={formData.minBudget} onChange={(val) => handleChange('minBudget', val)} />
                         <span className="text-gray-300">—</span>
-                        <Input placeholder="100" />
+                        <Input placeholder="100" value={formData.maxBudget} onChange={(val) => handleChange('maxBudget', val)} />
                       </div>
                     </Field>
                     <Field label="Occasion">
-                      <Input placeholder="Birthday" />
+                      <Input placeholder="Birthday" value={formData.occasion} onChange={(val) => handleChange('occasion', val)} />
                     </Field>
                   </div>
                   <div className="flex gap-4 pt-2">
                     <BackButton onClick={prevStep} />
-                    <button className="flex-[1.2] bg-gradient-to-r from-[#7C3AED] to-[#EC4899] hover:opacity-90 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95">
-                      <Sparkles size={18} /> Find Gifts
+                    <button 
+                      onClick={handleSubmit}
+                      disabled={loading}
+                      className="flex-[1.2] bg-gradient-to-r from-[#7C3AED] to-[#EC4899] hover:opacity-90 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 disabled:grayscale"
+                    >
+                      {loading ? "Thinking..." : <><Sparkles size={18} /> Find Gifts</>}
                     </button>
                   </div>
                 </div>
@@ -126,7 +174,7 @@ const GiftFinder = () => {
   );
 };
 
-// --- Sub-components for cleaner code ---
+// --- Updated Sub-components ---
 
 const Field = ({ label, children, hint }) => (
   <div className="space-y-2">
@@ -136,14 +184,24 @@ const Field = ({ label, children, hint }) => (
   </div>
 );
 
-const Input = (props) => (
-  <input {...props} className="w-full bg-[#F9FAFB] border border-gray-200 rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all placeholder:text-gray-400" />
+const Input = ({ value, onChange, ...props }) => (
+  <input 
+    {...props} 
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    className="w-full bg-[#F9FAFB] border border-gray-200 rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all placeholder:text-gray-400" 
+  />
 );
 
-const Select = ({ placeholder }) => (
+const Select = ({ placeholder, value, onChange, options = [] }) => (
   <div className="relative">
-    <select className="w-full appearance-none bg-[#F9FAFB] border border-gray-200 rounded-xl px-4 py-4 text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all">
-      <option>{placeholder}</option>
+    <select 
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full appearance-none bg-[#F9FAFB] border border-gray-200 rounded-xl px-4 py-4 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+    >
+      <option value="" disabled>{placeholder}</option>
+      {options.map(opt => <option key={opt} value={opt.toLowerCase()}>{opt}</option>)}
     </select>
     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
   </div>
