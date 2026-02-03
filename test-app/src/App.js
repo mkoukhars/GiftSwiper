@@ -1,11 +1,85 @@
 import React, { useState } from 'react';
 import { 
   ChevronDown, ArrowRight, ArrowLeft, Sparkles, 
-  Heart, Settings, Users, Gift, X, Check, Plus, Trash2, User
+  Heart, Settings, Users, Gift, X, Check, Plus, Trash2, User, Lock, Mail
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 
+const LoginPage = ({ onLogin }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    // Hardcoded credentials
+    if (email === 'admin' && password === 'password123') {
+      onLogin();
+    } else {
+      setError('Invalid credentials. (Try admin / password123)');
+    }
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }} 
+      animate={{ opacity: 1, y: 0 }} 
+      className="flex-1 flex flex-col justify-center"
+    >
+      <div className="text-center mb-10">
+        <div className="w-20 h-20 bg-purple-600 rounded-[2rem] flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-purple-200">
+          <Gift size={40} />
+        </div>
+        <h1 className="text-3xl font-black text-slate-900 leading-tight">Welcome Back</h1>
+        <p className="text-gray-400 font-medium">Log in to find the perfect gift</p>
+      </div>
+
+      <form onSubmit={handleLogin} className="space-y-5">
+        <Field label="Username">
+          <div className="relative">
+            <User className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input 
+              type="text"
+              placeholder="admin"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-gray-50 border-none rounded-2xl pl-12 pr-5 py-4 focus:ring-2 focus:ring-purple-500 outline-none transition-all"
+            />
+          </div>
+        </Field>
+
+        <Field label="Password">
+          <div className="relative">
+            <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input 
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-gray-50 border-none rounded-2xl pl-12 pr-5 py-4 focus:ring-2 focus:ring-purple-500 outline-none transition-all"
+            />
+          </div>
+        </Field>
+
+        {error && <p className="text-red-500 text-xs font-bold ml-1">{error}</p>}
+
+        <button 
+          type="submit"
+          className="w-full bg-[#7C3AED] text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-purple-200 active:scale-95 transition-all mt-4"
+        >
+          Sign In <ArrowRight size={20}/>
+        </button>
+      </form>
+      
+      <p className="text-center text-gray-400 text-sm mt-8">
+        Don't have an account? <span className="text-purple-600 font-bold cursor-pointer">Sign Up</span>
+      </p>
+    </motion.div>
+  );
+};
+
 const GiftFinder = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   // Navigation & View State
   const [activeTab, setActiveTab] = useState('find'); 
   const [view, setView] = useState('form'); 
@@ -14,8 +88,8 @@ const GiftFinder = () => {
   
   // Data Persistence
   const [results, setResults] = useState([]);
-  const [profiles, setProfiles] = useState([]); // List of people
-  const [savedGifts, setSavedGifts] = useState({}); // Map: { "Mom": [gift1, gift2] }
+  const [profiles, setProfiles] = useState([]); 
+  const [savedGifts, setSavedGifts] = useState({}); 
   
   const [formData, setFormData] = useState({
     name: '', relation: '', age: '', gender: '', hobbies: '', 
@@ -24,32 +98,23 @@ const GiftFinder = () => {
 
   const handleChange = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
 
-  // --- Logic Functions ---
-
   const handleSwipe = (gift, direction) => {
     if (direction === 'right') {
       const personName = formData.name || "Mystery Person";
-      
-      // 1. Add person to Circle if they don't exist
       if (!profiles.find(p => p.name === personName)) {
         setProfiles(prev => [...prev, { ...formData }]);
       }
-
-      // 2. Add gift to their specific saved list
       setSavedGifts(prev => ({
         ...prev,
         [personName]: [...(prev[personName] || []), gift]
       }));
     }
-    // Remove the card from the visible stack
     setResults(prev => prev.filter(item => item.id !== gift.id));
   };
 
   const handleSubmit = async () => {
     setLoading(true);
-    // Get previously saved titles for this person to avoid repeats
     const pastGifts = savedGifts[formData.name]?.map(g => g.title) || [];
-
     try {
       const response = await fetch('http://localhost:5000/generate-gifts', {
         method: 'POST',
@@ -61,7 +126,6 @@ const GiftFinder = () => {
       setView('swipe');
     } catch (error) {
       console.error("Backend unreachable", error);
-      // Fallback data for testing
       setResults([
         { id: 101, title: "Custom Portrait", description: "Hand-painted based on a photo.", category: "Arts" },
         { id: 102, title: "Tech Organizer", description: "Leather roll for cables.", category: "Technology" }
@@ -83,150 +147,158 @@ const GiftFinder = () => {
         <div className="p-8 flex-1 flex flex-col overflow-y-auto">
           
           <AnimatePresence mode="wait">
-            {/* FIND TAB */}
-            {activeTab === 'find' && (
-              <motion.div key="find" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col">
-                {view === 'form' ? (
-                  <div className="flex-1 flex flex-col">
-                    <div className="flex gap-2 h-1.5 mb-10">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className={`flex-1 rounded-full transition-all duration-500 ${step >= i ? 'bg-[#7C3AED]' : 'bg-purple-100'}`} />
-                      ))}
-                    </div>
-
-                    {step === 1 && (
-                      <StepWrapper title="Who is it for?" sub="Pick a name to save to your Circle.">
-                        <Field label="Name"><Input placeholder="e.g. Dad" value={formData.name} onChange={(v) => handleChange('name', v)} /></Field>
-                        <Field label="Relation"><Select placeholder="Select" value={formData.relation} onChange={(v) => handleChange('relation', v)} options={['Partner', 'Friend', 'Parent', 'Sibling']} /></Field>
-                        <NextButton onClick={() => setStep(2)} />
-                      </StepWrapper>
-                    )}
-
-                    {step === 2 && (
-                      <StepWrapper title="Personalize" sub="What do they enjoy?">
-                        <Field label="Hobbies"><Input placeholder="Cooking, Gaming" value={formData.hobbies} onChange={(v) => handleChange('hobbies', v)} /></Field>
-                        <Field label="Age"><Input type="number" placeholder="25" value={formData.age} onChange={(v) => handleChange('age', v)} /></Field>
-                        <div className="flex gap-4"><BackButton onClick={() => setStep(1)} /><NextButton onClick={() => setStep(3)} /></div>
-                      </StepWrapper>
-                    )}
-
-                    {step === 3 && (
-                      <StepWrapper title="Logistics" sub="Set your boundaries.">
-                        <div className="flex gap-4">
-                          <Field label="Min $"><Input type="number" value={formData.minBudget} onChange={(v) => handleChange('minBudget', v)} /></Field>
-                          <Field label="Max $"><Input type="number" value={formData.maxBudget} onChange={(v) => handleChange('maxBudget', v)} /></Field>
+            {!isLoggedIn ? (
+              <LoginPage onLogin={() => setIsLoggedIn(true)} />
+            ) : (
+              <>
+                {/* FIND TAB */}
+                {activeTab === 'find' && (
+                  <motion.div key="find" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col">
+                    {view === 'form' ? (
+                      <div className="flex-1 flex flex-col">
+                        <div className="flex gap-2 h-1.5 mb-10">
+                          {[1, 2, 3].map((i) => (
+                            <div key={i} className={`flex-1 rounded-full transition-all duration-500 ${step >= i ? 'bg-[#7C3AED]' : 'bg-purple-100'}`} />
+                          ))}
                         </div>
-                        <Field label="Occasion"><Input placeholder="Christmas" value={formData.occasion} onChange={(v) => handleChange('occasion', v)} /></Field>
-                        <div className="flex gap-4">
-                          <BackButton onClick={() => setStep(2)} />
-                          <button onClick={handleSubmit} className="flex-[1.5] bg-[#7C3AED] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
-                            {loading ? "Thinking..." : <><Sparkles size={18} /> Get Ideas</>}
-                          </button>
-                        </div>
-                      </StepWrapper>
-                    )}
-                  </div>
-                ) : (
-                  <div className="relative w-full h-[450px]">
-                    <AnimatePresence>
-                      {results.map((gift, idx) => (
-                        <TinderCard key={gift.id || idx} gift={gift} onSwipe={(dir) => handleSwipe(gift, dir)} />
-                      ))}
-                    </AnimatePresence>
-                    {results.length === 0 && (
-                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="h-full flex flex-col items-center justify-center text-center">
-                        <div className="bg-purple-50 p-6 rounded-full mb-4 text-purple-500"><Gift size={40}/></div>
-                        <p className="font-bold text-slate-800 text-lg">More ideas?</p>
-                        <p className="text-gray-400 text-sm px-10">Generate another set or change the criteria.</p>
-                        <button onClick={() => setView('form')} className="mt-6 bg-slate-900 text-white px-8 py-3 rounded-full font-bold shadow-lg">New Search</button>
-                      </motion.div>
-                    )}
-                  </div>
-                )}
-              </motion.div>
-            )}
 
-            {/* CIRCLE TAB */}
-            {activeTab === 'people' && (
-              <motion.div key="people" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1">
-                <h2 className="text-2xl font-black mb-6 flex items-center gap-2"><Users className="text-purple-600"/> Circle</h2>
-                <div className="space-y-3">
-                  {profiles.map((p, i) => (
-                    <button key={i} onClick={() => loadProfile(p)} className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-purple-200 transition-all group">
-                      <div className="flex items-center gap-4 text-left">
-                        <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold">{p.name[0]}</div>
-                        <div>
-                          <p className="font-bold text-slate-800">{p.name}</p>
-                          <p className="text-xs text-gray-500">{p.relation} • {p.hobbies}</p>
-                        </div>
-                      </div>
-                      <ArrowRight size={18} className="text-gray-300 group-hover:text-purple-500" />
-                    </button>
-                  ))}
-                  <button onClick={() => { setFormData({name:'', relation:'', hobbies:''}); setView('form'); setStep(1); setActiveTab('find'); }} className="w-full p-4 border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center gap-2 text-gray-400 font-bold hover:bg-gray-50 transition-all">
-                    <Plus size={18} /> New Person
-                  </button>
-                </div>
-              </motion.div>
-            )}
+                        {step === 1 && (
+                          <StepWrapper title="Who is it for?" sub="Pick a name to save to your Circle.">
+                            <Field label="Name"><Input placeholder="e.g. Dad" value={formData.name} onChange={(v) => handleChange('name', v)} /></Field>
+                            <Field label="Relation"><Select placeholder="Select" value={formData.relation} onChange={(v) => handleChange('relation', v)} options={['Partner', 'Friend', 'Parent', 'Sibling']} /></Field>
+                            <NextButton onClick={() => setStep(2)} />
+                          </StepWrapper>
+                        )}
 
-            {/* SAVED TAB */}
-            {activeTab === 'saved' && (
-              <motion.div key="saved" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1">
-                <h2 className="text-2xl font-black mb-6 flex items-center gap-2"><Heart className="text-pink-500"/> Saved</h2>
-                {Object.keys(savedGifts).length === 0 ? (
-                  <p className="text-center text-gray-400 mt-20">Nothing saved yet. Try swiping right!</p>
-                ) : (
-                  Object.entries(savedGifts).map(([name, gifts]) => (
-                    <div key={name} className="mb-6">
-                      <h3 className="font-bold text-slate-800 border-b pb-2 mb-3">{name}</h3>
-                      <div className="space-y-2">
-                        {gifts.map((g, i) => (
-                          <div key={i} className="p-4 bg-white border border-gray-100 rounded-xl flex justify-between items-center shadow-sm">
-                            <div className="pr-4">
-                              <p className="font-bold text-slate-800 text-sm">{g.title}</p>
-                              <p className="text-[10px] uppercase font-bold text-purple-400">{g.category}</p>
+                        {step === 2 && (
+                          <StepWrapper title="Personalize" sub="What do they enjoy?">
+                            <Field label="Hobbies"><Input placeholder="Cooking, Gaming" value={formData.hobbies} onChange={(v) => handleChange('hobbies', v)} /></Field>
+                            <Field label="Age"><Input type="number" placeholder="25" value={formData.age} onChange={(v) => handleChange('age', v)} /></Field>
+                            <div className="flex gap-4"><BackButton onClick={() => setStep(1)} /><NextButton onClick={() => setStep(3)} /></div>
+                          </StepWrapper>
+                        )}
+
+                        {step === 3 && (
+                          <StepWrapper title="Logistics" sub="Set your boundaries.">
+                            <div className="flex gap-4">
+                              <Field label="Min $"><Input type="number" value={formData.minBudget} onChange={(v) => handleChange('minBudget', v)} /></Field>
+                              <Field label="Max $"><Input type="number" value={formData.maxBudget} onChange={(v) => handleChange('maxBudget', v)} /></Field>
                             </div>
-                            <Heart size={14} className="text-pink-500 fill-pink-500 shrink-0" />
-                          </div>
-                        ))}
+                            <Field label="Occasion"><Input placeholder="Christmas" value={formData.occasion} onChange={(v) => handleChange('occasion', v)} /></Field>
+                            <div className="flex gap-4">
+                              <BackButton onClick={() => setStep(2)} />
+                              <button onClick={handleSubmit} className="flex-[1.5] bg-[#7C3AED] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
+                                {loading ? "Thinking..." : <><Sparkles size={18} /> Get Ideas</>}
+                              </button>
+                            </div>
+                          </StepWrapper>
+                        )}
                       </div>
-                    </div>
-                  ))
+                    ) : (
+                      <div className="relative w-full h-[450px]">
+                        <AnimatePresence>
+                          {results.map((gift, idx) => (
+                            <TinderCard key={gift.id || idx} gift={gift} onSwipe={(dir) => handleSwipe(gift, dir)} />
+                          ))}
+                        </AnimatePresence>
+                        {results.length === 0 && (
+                          <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="h-full flex flex-col items-center justify-center text-center">
+                            <div className="bg-purple-50 p-6 rounded-full mb-4 text-purple-500"><Gift size={40}/></div>
+                            <p className="font-bold text-slate-800 text-lg">More ideas?</p>
+                            <p className="text-gray-400 text-sm px-10">Generate another set or change the criteria.</p>
+                            <button onClick={() => setView('form')} className="mt-6 bg-slate-900 text-white px-8 py-3 rounded-full font-bold shadow-lg">New Search</button>
+                          </motion.div>
+                        )}
+                      </div>
+                    )}
+                  </motion.div>
                 )}
-              </motion.div>
-            )}
 
-            {/* SETTINGS TAB */}
-            {activeTab === 'settings' && (
-              <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1">
-                <h2 className="text-2xl font-black mb-6">Settings</h2>
-                <div className="space-y-4">
-                  <div className="p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
-                    <span className="font-medium text-slate-700">Dark Mode</span>
-                    <div className="w-12 h-6 bg-gray-300 rounded-full"></div>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
-                    <span className="font-medium text-slate-700">Notifications</span>
-                    <div className="w-12 h-6 bg-purple-500 rounded-full"></div>
-                  </div>
-                  <button className="w-full p-4 text-red-500 font-bold bg-red-50 rounded-2xl">Clear All Data</button>
-                </div>
-              </motion.div>
+                {/* CIRCLE TAB */}
+                {activeTab === 'people' && (
+                  <motion.div key="people" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1">
+                    <h2 className="text-2xl font-black mb-6 flex items-center gap-2"><Users className="text-purple-600"/> Circle</h2>
+                    <div className="space-y-3">
+                      {profiles.map((p, i) => (
+                        <button key={i} onClick={() => loadProfile(p)} className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-purple-200 transition-all group">
+                          <div className="flex items-center gap-4 text-left">
+                            <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold">{p.name[0]}</div>
+                            <div>
+                              <p className="font-bold text-slate-800">{p.name}</p>
+                              <p className="text-xs text-gray-500">{p.relation} • {p.hobbies}</p>
+                            </div>
+                          </div>
+                          <ArrowRight size={18} className="text-gray-300 group-hover:text-purple-500" />
+                        </button>
+                      ))}
+                      <button onClick={() => { setFormData({name:'', relation:'', hobbies:''}); setView('form'); setStep(1); setActiveTab('find'); }} className="w-full p-4 border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center gap-2 text-gray-400 font-bold hover:bg-gray-50 transition-all">
+                        <Plus size={18} /> New Person
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* SAVED TAB */}
+                {activeTab === 'saved' && (
+                  <motion.div key="saved" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1">
+                    <h2 className="text-2xl font-black mb-6 flex items-center gap-2"><Heart className="text-pink-500"/> Saved</h2>
+                    {Object.keys(savedGifts).length === 0 ? (
+                      <p className="text-center text-gray-400 mt-20">Nothing saved yet. Try swiping right!</p>
+                    ) : (
+                      Object.entries(savedGifts).map(([name, gifts]) => (
+                        <div key={name} className="mb-6">
+                          <h3 className="font-bold text-slate-800 border-b pb-2 mb-3">{name}</h3>
+                          <div className="space-y-2">
+                            {gifts.map((g, i) => (
+                              <div key={i} className="p-4 bg-white border border-gray-100 rounded-xl flex justify-between items-center shadow-sm">
+                                <div className="pr-4">
+                                  <p className="font-bold text-slate-800 text-sm">{g.title}</p>
+                                  <p className="text-[10px] uppercase font-bold text-purple-400">{g.category}</p>
+                                </div>
+                                <Heart size={14} className="text-pink-500 fill-pink-500 shrink-0" />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </motion.div>
+                )}
+
+                {/* SETTINGS TAB */}
+                {activeTab === 'settings' && (
+                  <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1">
+                    <h2 className="text-2xl font-black mb-6">Settings</h2>
+                    <div className="space-y-4">
+                      <div className="p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
+                        <span className="font-medium text-slate-700">Dark Mode</span>
+                        <div className="w-12 h-6 bg-gray-300 rounded-full"></div>
+                      </div>
+                      <div className="p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
+                        <span className="font-medium text-slate-700">Notifications</span>
+                        <div className="w-12 h-6 bg-purple-500 rounded-full"></div>
+                      </div>
+                      <button onClick={() => setIsLoggedIn(false)} className="w-full p-4 text-red-500 font-bold bg-red-50 rounded-2xl">Log Out</button>
+                    </div>
+                  </motion.div>
+                )}
+              </>
             )}
           </AnimatePresence>
         </div>
       </div>
 
-      {/* Nav Bar */}
-      <div className="fixed bottom-6 w-full max-w-md px-4">
-        <div className="bg-white/90 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl flex justify-around p-3">
-          <TabButton active={activeTab === 'find'} icon={<Gift />} label="Find" onClick={() => setActiveTab('find')} />
-          <TabButton active={activeTab === 'saved'} icon={<Heart />} label="Saved" onClick={() => setActiveTab('saved')} />
-          <TabButton active={activeTab === 'people'} icon={<Users />} label="Circle" onClick={() => setActiveTab('people')} />
-          <TabButton active={activeTab === 'settings'} icon={<Settings />} label="Settings" onClick={() => setActiveTab('settings')} />
+      {/* Nav Bar (Only show if logged in) */}
+      {isLoggedIn && (
+        <div className="fixed bottom-6 w-full max-w-md px-4">
+          <div className="bg-white/90 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl flex justify-around p-3">
+            <TabButton active={activeTab === 'find'} icon={<Gift />} label="Find" onClick={() => setActiveTab('find')} />
+            <TabButton active={activeTab === 'saved'} icon={<Heart />} label="Saved" onClick={() => setActiveTab('saved')} />
+            <TabButton active={activeTab === 'people'} icon={<Users />} label="Circle" onClick={() => setActiveTab('people')} />
+            <TabButton active={activeTab === 'settings'} icon={<Settings />} label="Settings" onClick={() => setActiveTab('settings')} />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -311,4 +383,4 @@ const TinderCard = ({ gift, onSwipe }) => {
   );
 };
 
-export default GiftFinder; // Gift Finder
+export default GiftFinder;
