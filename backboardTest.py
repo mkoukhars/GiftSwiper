@@ -1,21 +1,24 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
+import json # Added for parsing AI string into a List
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 app = Flask(__name__)
-# This allows your React app (usually on port 3000 or 5173) to talk to Python
 CORS(app)
 
-API_KEY = "espr_0JlUd7dxtN_6wb_WRFQYnm_H1SueOV7nDNykxIXLH_o"
+API_KEY = os.getenv("API_KEY")
 BASE_URL = "https://app.backboard.io/api"
 HEADERS = {"X-API-Key": API_KEY}
 
 @app.route('/generate-gifts', methods=['POST'])
 def generate_gifts():
-    # 1. Get the full data object from React
     data = request.json
     
-    # Extract fields for easy printing/prompting
+    # Extract fields
     relation = data.get('relation')
     age = data.get('age')
     gender = data.get('gender')
@@ -25,28 +28,22 @@ def generate_gifts():
     max_b = data.get('maxBudget')
     occasion = data.get('occasion')
 
-    # 2. Print everything to terminal (The "Logging" part)
-    print("\n--- NEW GIFT REQUEST RECEIVED ---")
-    print(f"Recipient: {gender}, {age} years old ({relation})")
-    print(f"Occasion: {occasion}")
-    print(f"Interests: {hobbies}")
-    print(f"Traits: {personality}")
-    print(f"Budget: ${min_b} - ${max_b}")
-    print("----------------------------------\n")
-
-    # 3. Create the AI Prompt
+    # 1. Strict JSON Prompt
+    # We tell the AI exactly what keys to use so the frontend doesn't crash
     ai_prompt = (
-        f"Suggest 3 creative gift ideas for my {relation}. "
-        f"They are a {age} year old {gender} who likes {hobbies}. "
-        f"Their personality is {personality}. The occasion is {occasion} "
-        f"and my budget is between ${min_b} and ${max_b}."
+        f"Suggest 5 gift ideas for my {relation} ({age}yo {gender}) who likes {hobbies}. "
+        f"Personality: {personality}. Occasion: {occasion}. Budget: ${min_b}-${max_b}. "
+        "RETURN ONLY A JSON ARRAY. Do not include conversational text. "
+        "Format: "
+        '[{"id": 1, "title": "Name", "description": "Pitch", "category": "Home"}]'
+        "Categories must be: Arts, Entertainment, Technology, Food & Drink, Home, or Self-care."
     )
 
     try:
         # Create assistant
         ast_resp = requests.post(
             f"{BASE_URL}/assistants",
-            json={"name": "Gift Guru", "system_prompt": "You are an expert gift personal shopper. Give concise, exciting suggestions."},
+            json={"name": "Gift Guru", "system_prompt": "You are a JSON generator. You only output valid JSON arrays."},
             headers=HEADERS,
         )
         assistant_id = ast_resp.json()["assistant_id"]
@@ -66,14 +63,31 @@ def generate_gifts():
             data={"content": ai_prompt, "stream": "false", "memory": "Auto"},
         )
         
-        ai_content = msg_resp.json().get("content")
-        print(f"AI RECOMMENDED: {ai_content}")
+        ai_raw_content = msg_resp.json().get("content", "[]")
 
-        # Return the result to React
-        return jsonify({"result": ai_content})
+        # 2. JSON Cleaning & Parsing
+        # AI often wraps JSON in code blocks (```json ... ```). We must strip those.
+        clean_content = ai_raw_content.replace("```json", "").replace("```", "").strip()
+        
+        try:
+            gift_list = json.loads(clean_content)
+            # Ensure the result is actually a list for the frontend's .map()
+            if not isinstance(gift_list, list):
+                gift_list = [gift_list]
+        except Exception as parse_error:
+            print(f"Parsing failed: {parse_error}")
+            # Fallback if AI produces bad JSON
+            gift_list = [{
+                "id": 1, 
+                "title": "AI Suggestion", 
+                "description": ai_raw_content[:150], 
+                "category": "Home"
+            }]
+
+        return jsonify({"result": gift_list})
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"General Error: {e}")
         return jsonify({"error": "Failed to generate gifts"}), 500
 
 if __name__ == '__main__':
