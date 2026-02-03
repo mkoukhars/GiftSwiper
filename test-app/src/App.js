@@ -311,4 +311,4 @@ const TinderCard = ({ gift, onSwipe }) => {
   );
 };
 
-export default GiftFinder;
+export default GiftFinder; // Gift Finder
