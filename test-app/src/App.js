@@ -1,24 +1,24 @@
-import React, { useState } from 'react';
-import { 
-  ChevronDown, ArrowRight, ArrowLeft, Sparkles, 
+import React, { useState, useEffect } from 'react'; // imported statement for gift swiper to work 
+import {
+  ChevronDown, ArrowRight, ArrowLeft, Sparkles,
   Heart, Settings, Users, Gift, X, Check, Plus, Trash2, User
 } from 'lucide-react';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 
 const GiftFinder = () => {
   // Navigation & View State
-  const [activeTab, setActiveTab] = useState('find'); 
-  const [view, setView] = useState('form'); 
+  const [activeTab, setActiveTab] = useState('find');
+  const [view, setView] = useState('form');
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  
+
   // Data Persistence
   const [results, setResults] = useState([]);
   const [profiles, setProfiles] = useState([]); // List of people
   const [savedGifts, setSavedGifts] = useState({}); // Map: { "Mom": [gift1, gift2] }
-  
+
   const [formData, setFormData] = useState({
-    name: '', relation: '', age: '', gender: '', hobbies: '', 
+    name: '', relation: '', age: '', gender: '', hobbies: '',
     personality: '', minBudget: '', maxBudget: '', occasion: ''
   });
 
@@ -29,7 +29,7 @@ const GiftFinder = () => {
   const handleSwipe = (gift, direction) => {
     if (direction === 'right') {
       const personName = formData.name || "Mystery Person";
-      
+
       // 1. Add person to Circle if they don't exist
       if (!profiles.find(p => p.name === personName)) {
         setProfiles(prev => [...prev, { ...formData }]);
@@ -57,7 +57,7 @@ const GiftFinder = () => {
         body: JSON.stringify({ ...formData, alreadyRecommended: pastGifts }),
       });
       const data = await response.json();
-      setResults(data.result || []); 
+      setResults(data.result || []);
       setView('swipe');
     } catch (error) {
       console.error("Backend unreachable", error);
@@ -81,7 +81,7 @@ const GiftFinder = () => {
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 font-sans pb-24 text-slate-900">
       <div className="w-full max-w-md bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col min-h-[620px] relative">
         <div className="p-8 flex-1 flex flex-col overflow-y-auto">
-          
+
           <AnimatePresence mode="wait">
             {/* FIND TAB */}
             {activeTab === 'find' && (
@@ -135,7 +135,7 @@ const GiftFinder = () => {
                     </AnimatePresence>
                     {results.length === 0 && (
                       <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="h-full flex flex-col items-center justify-center text-center">
-                        <div className="bg-purple-50 p-6 rounded-full mb-4 text-purple-500"><Gift size={40}/></div>
+                        <div className="bg-purple-50 p-6 rounded-full mb-4 text-purple-500"><Gift size={40} /></div>
                         <p className="font-bold text-slate-800 text-lg">More ideas?</p>
                         <p className="text-gray-400 text-sm px-10">Generate another set or change the criteria.</p>
                         <button onClick={() => setView('form')} className="mt-6 bg-slate-900 text-white px-8 py-3 rounded-full font-bold shadow-lg">New Search</button>
@@ -149,7 +149,7 @@ const GiftFinder = () => {
             {/* CIRCLE TAB */}
             {activeTab === 'people' && (
               <motion.div key="people" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1">
-                <h2 className="text-2xl font-black mb-6 flex items-center gap-2"><Users className="text-purple-600"/> Circle</h2>
+                <h2 className="text-2xl font-black mb-6 flex items-center gap-2"><Users className="text-purple-600" /> Circle</h2>
                 <div className="space-y-3">
                   {profiles.map((p, i) => (
                     <button key={i} onClick={() => loadProfile(p)} className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-purple-200 transition-all group">
@@ -163,7 +163,7 @@ const GiftFinder = () => {
                       <ArrowRight size={18} className="text-gray-300 group-hover:text-purple-500" />
                     </button>
                   ))}
-                  <button onClick={() => { setFormData({name:'', relation:'', hobbies:''}); setView('form'); setStep(1); setActiveTab('find'); }} className="w-full p-4 border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center gap-2 text-gray-400 font-bold hover:bg-gray-50 transition-all">
+                  <button onClick={() => { setFormData({ name: '', relation: '', hobbies: '' }); setView('form'); setStep(1); setActiveTab('find'); }} className="w-full p-4 border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center gap-2 text-gray-400 font-bold hover:bg-gray-50 transition-all">
                     <Plus size={18} /> New Person
                   </button>
                 </div>
@@ -173,7 +173,7 @@ const GiftFinder = () => {
             {/* SAVED TAB */}
             {activeTab === 'saved' && (
               <motion.div key="saved" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1">
-                <h2 className="text-2xl font-black mb-6 flex items-center gap-2"><Heart className="text-pink-500"/> Saved</h2>
+                <h2 className="text-2xl font-black mb-6 flex items-center gap-2"><Heart className="text-pink-500" /> Saved</h2>
                 {Object.keys(savedGifts).length === 0 ? (
                   <p className="text-center text-gray-400 mt-20">Nothing saved yet. Try swiping right!</p>
                 ) : (
@@ -265,7 +265,7 @@ const TabButton = ({ active, icon, label, onClick }) => (
 );
 
 const NextButton = ({ onClick }) => (
-  <button onClick={onClick} className="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">Next <ArrowRight size={20}/></button>
+  <button onClick={onClick} className="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">Next <ArrowRight size={20} /></button>
 );
 
 const BackButton = ({ onClick }) => (
@@ -277,15 +277,40 @@ const TinderCard = ({ gift, onSwipe }) => {
   const rotate = useTransform(x, [-200, 200], [-25, 25]);
   const opacity = useTransform(x, [-200, -150, 0, 150, 200], [0, 1, 1, 1, 0]);
 
+  // Function to handle swipes from buttons or keys
+  const triggerSwipe = (direction) => {
+    const targetX = direction === 'right' ? 400 : -400;
+    // Animate the motion value before triggering the data change
+    animate(x, targetX, {
+      duration: 0.4,
+      onComplete: () => onSwipe(direction)
+    });
+  };
+
+  // Keyboard support: Arrow keys
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "ArrowRight") triggerSwipe('right');
+      if (e.key === "ArrowLeft") triggerSwipe('left');
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const catStyles = {
-    "Home": "bg-orange-400", "Technology": "bg-blue-500", "Food & Drink": "bg-emerald-500",
-    "Arts": "bg-purple-500", "Entertainment": "bg-red-500", "Self-care": "bg-pink-400"
+    "Home": "bg-orange-400",
+    "Technology": "bg-blue-500",
+    "Food & Drink": "bg-emerald-500",
+    "Arts": "bg-purple-500",
+    "Entertainment": "bg-red-500",
+    "Self-care": "bg-pink-400"
   };
 
   return (
-    <motion.div 
+    <motion.div
       style={{ x, rotate, opacity }}
-      drag="x" dragConstraints={{ left: 0, right: 0 }}
+      drag="x"
+      dragConstraints={{ left: 0, right: 0 }}
       onDragEnd={(_, info) => {
         if (info.offset.x > 100) onSwipe('right');
         else if (info.offset.x < -100) onSwipe('left');
@@ -303,8 +328,18 @@ const TinderCard = ({ gift, onSwipe }) => {
         <h3 className="text-2xl font-black text-slate-800 mb-2 leading-tight">{gift.title}</h3>
         <p className="text-gray-500 text-sm leading-relaxed line-clamp-3">{gift.description}</p>
         <div className="mt-auto flex justify-between gap-4 pt-4">
-          <div className="flex-1 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center border border-red-100"><X size={20}/></div>
-          <div className="flex-1 h-12 rounded-full bg-green-50 text-green-500 flex items-center justify-center border border-green-100"><Check size={20}/></div>
+          <button
+            onClick={() => triggerSwipe('left')}
+            className="flex-1 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center border border-red-100 hover:bg-red-100 transition-colors"
+          >
+            <X size={20} />
+          </button>
+          <button
+            onClick={() => triggerSwipe('right')}
+            className="flex-1 h-12 rounded-full bg-green-50 text-green-500 flex items-center justify-center border border-green-100 hover:bg-green-100 transition-colors"
+          >
+            <Check size={20} />
+          </button>
         </div>
       </div>
     </motion.div>
